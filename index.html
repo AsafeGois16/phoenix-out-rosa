@@ -187,6 +187,14 @@ html{scroll-padding-top:80px}
 .header .phoenix-wordmark small{font-family:Arial,Helvetica,sans-serif;letter-spacing:.21em;font-size:10px;margin-top:3px;font-weight:600;color:#2a7eb5}
 @media(max-width:700px){.header .brand.phoenix-brand{max-width:166px;gap:5px}.header .phoenix-emblem{width:33px;height:50px;flex-basis:33px}.header .phoenix-wordmark strong{font-size:23px}.header .phoenix-wordmark small{font-size:7px;letter-spacing:.18em}}
 @media(max-width:390px){.header .brand.phoenix-brand{max-width:148px}.header .phoenix-emblem{width:29px;height:44px;flex-basis:29px}.header .phoenix-wordmark strong{font-size:21px}.header .phoenix-wordmark small{font-size:6.5px}}
+
+/* Respostas contextualizadas: quebras de linha legíveis sem alterar o layout do diagnóstico. */
+.choice-row span{min-height:64px;padding:10px 9px;line-height:1.4;white-space:normal;overflow-wrap:break-word;word-break:normal}
+@media(max-width:540px){
+ .choice-row{grid-template-columns:minmax(0,1fr)}
+ .choice-row span{min-height:43px;text-align:left;justify-content:flex-start;padding:11px 13px}
+}
+
 </style>
 </head>
 <body>
@@ -311,13 +319,217 @@ html{scroll-padding-top:80px}
 const APP={mode:'b2c',step:1,selectedCity:null,cities:[],citiesReady:false,submitted:false,result:null};
 const $=id=>document.getElementById(id);
 const answers=[{label:'Sim, já faz parte',value:100},{label:'Em parte',value:60},{label:'Ainda não',value:20},{label:'Não tenho certeza',value:35}];
+// Textos contextualizados por pergunta e jornada. A pontuação e os códigos continuam iguais.
+const questionAnswerLabels={
+  "b2c": {
+    "q_saude_0": [
+      "Faço acompanhamento preventivo com frequência",
+      "Procuro orientação em momentos específicos",
+      "Ainda não mantenho acompanhamento preventivo",
+      "Não sei quais cuidados são indicados para mim"
+    ],
+    "q_saude_1": [
+      "Sei onde buscar consultas e exames quando preciso",
+      "Consigo acesso, mas nem sempre com facilidade",
+      "Tenho dificuldade para conseguir atendimento",
+      "Não conheço bem os caminhos disponíveis"
+    ],
+    "q_bemestar_0": [
+      "Reservo momentos regulares para descansar",
+      "Consigo descansar quando a rotina permite",
+      "Raramente tenho tempo para descansar",
+      "Não tenho clareza sobre meu equilíbrio atual"
+    ],
+    "q_bemestar_1": [
+      "Sei a quem recorrer para apoio profissional",
+      "Conheço algumas opções, mas tenho dúvidas",
+      "Não sei onde buscar apoio emocional profissional",
+      "Nunca procurei saber como acessar esse apoio"
+    ],
+    "q_apoio_0": [
+      "Tenho pessoas em quem confio e posso contar",
+      "Tenho apoio, mas nem sempre disponível",
+      "Sinto falta de alguém com quem contar",
+      "Não sei a quem recorreria numa emergência"
+    ],
+    "q_apoio_1": [
+      "Tenho recursos e serviços disponíveis e acessíveis",
+      "Tenho alguns recursos, mas há limitações",
+      "Não conto com recursos ou serviços suficientes",
+      "Não sei a qual serviço recorreria"
+    ],
+    "q_vida_0": [
+      "Sei quem precisaria de suporte e já considerei isso",
+      "Já pensei nisso, mas não me organizei",
+      "Ainda não refleti sobre essa situação",
+      "Não sei quem precisaria de suporte"
+    ],
+    "q_vida_1": [
+      "Tenho uma reserva ou proteção estruturada",
+      "Tenho algum amparo, mas pode ser insuficiente",
+      "Ainda não organizei amparo financeiro",
+      "Não sei se minhas proteções seriam suficientes"
+    ],
+    "q_financeiro_0": [
+      "Acompanho despesas e planejo meu orçamento",
+      "Planejo algumas despesas, sem rotina fixa",
+      "Ainda não consigo organizar meu orçamento",
+      "Não sei exatamente como distribuo meus gastos"
+    ],
+    "q_financeiro_1": [
+      "Tenho reserva ou estratégia para imprevistos",
+      "Tenho algum recurso, mas ainda limitado",
+      "Não tenho reserva nem estratégia definida",
+      "Não sei quanto precisaria reservar"
+    ],
+    "q_futuro_0": [
+      "Tenho objetivos definidos para os próximos anos",
+      "Tenho algumas ideias, ainda sem planejamento",
+      "Ainda não fiz planos pessoais ou familiares",
+      "Não sei por onde começar a planejar"
+    ],
+    "q_futuro_1": [
+      "Reviso minhas proteções quando a rotina muda",
+      "Reviso apenas algumas quando necessário",
+      "Não costumo revisar planos e proteções",
+      "Não sei quando devo revisá-los"
+    ]
+  },
+  "b2b": {
+    "q_saude_0": [
+      "Promovemos ações preventivas contínuas",
+      "Oferecemos ações em datas específicas",
+      "Ainda não temos ações preventivas",
+      "Não sei informar quais ações existem"
+    ],
+    "q_saude_1": [
+      "A equipe sabe onde acessar consultas e exames",
+      "Parte da equipe conhece os caminhos",
+      "Os meios de acesso não são divulgados",
+      "Não sei como a equipe é orientada"
+    ],
+    "q_bemestar_0": [
+      "Mantemos ações regulares de bem-estar",
+      "Há iniciativas pontuais de acolhimento",
+      "Não temos iniciativas estruturadas",
+      "Não sei se existem ações nessa área"
+    ],
+    "q_bemestar_1": [
+      "Os canais de apoio emocional são claros",
+      "Parte da equipe sabe onde procurar ajuda",
+      "Ainda não orientamos sobre esse acesso",
+      "Não sei quais canais estão disponíveis"
+    ],
+    "q_apoio_0": [
+      "Temos canais formais e acessíveis de acolhimento",
+      "Acolhemos caso a caso, sem fluxo definido",
+      "Ainda não há canais de acolhimento",
+      "Não sei como são tratados esses casos"
+    ],
+    "q_apoio_1": [
+      "Os benefícios são comunicados com clareza",
+      "A comunicação acontece de forma irregular",
+      "Não há comunicação estruturada",
+      "Não sei quanto a equipe conhece os benefícios"
+    ],
+    "q_vida_0": [
+      "Temos diretrizes para apoiar equipe e famílias",
+      "Consideramos o tema, sem plano completo",
+      "Ainda não planejamos esse tipo de apoio",
+      "Não sei se a empresa tem essas medidas"
+    ],
+    "q_vida_1": [
+      "Há medidas de amparo financeiro definidas",
+      "Existem medidas, mas com lacunas",
+      "Não há amparo financeiro estruturado",
+      "Não sei quais medidas estão vigentes"
+    ],
+    "q_financeiro_0": [
+      "Reservamos recursos para ações de cuidado",
+      "Há verba ocasional para iniciativas",
+      "Não há planejamento financeiro específico",
+      "Não sei como esses recursos são definidos"
+    ],
+    "q_financeiro_1": [
+      "Avaliamos custos e impactos com regularidade",
+      "Avaliamos alguns riscos pontualmente",
+      "Não realizamos esse planejamento",
+      "Não sei como esses impactos são avaliados"
+    ],
+    "q_futuro_0": [
+      "Temos metas definidas para o cuidado da equipe",
+      "Há intenções, mas sem metas claras",
+      "Ainda não estabelecemos esses objetivos",
+      "Não sei quais metas existem"
+    ],
+    "q_futuro_1": [
+      "Revisamos benefícios e continuidade periodicamente",
+      "Revisamos somente quando surge necessidade",
+      "Não há rotina de revisão definida",
+      "Não sei quando esses temas são revistos"
+    ]
+  }
+};
+const contextAnswerLabels={
+  "b2c": {
+    "dental": [
+      "Sei onde e como acessar atendimento odontológico",
+      "Conheço opções, mas tenho dificuldades de acesso",
+      "Ainda não sei onde obter esse atendimento",
+      "Não sei se tenho algum recurso disponível"
+    ],
+    "property": [
+      "Sim, tenho bens importantes para minha rotina",
+      "Não, esse tipo de patrimônio não se aplica",
+      "Não sei avaliar o impacto de uma perda"
+    ],
+    "propertyplan": [
+      "Tenho reserva ou proteção para danos à moradia",
+      "Tenho algum recurso, mas ainda limitado",
+      "Não tenho plano para reparos e despesas",
+      "Não sei como lidaria com esses custos"
+    ],
+    "review": [
+      "Sei onde consultar minhas proteções e benefícios",
+      "Localizo parte das informações quando preciso",
+      "Não sei onde consultar essas informações",
+      "Não tenho certeza do que está ativo"
+    ]
+  },
+  "b2b": {
+    "dental": [
+      "A equipe recebe orientação clara sobre o acesso",
+      "Há orientações parciais ou pouco divulgadas",
+      "Ainda não comunicamos opções de atendimento",
+      "Não sei se existe orientação para a equipe"
+    ],
+    "property": [
+      "Sim, instalações ou equipamentos são essenciais",
+      "Não, esse tipo de patrimônio não se aplica",
+      "Não sei avaliar essa dependência"
+    ],
+    "propertyplan": [
+      "Temos plano definido de continuidade e reparos",
+      "Há medidas pontuais para emergências",
+      "Não temos medidas para esses imprevistos",
+      "Não sei quais medidas estão disponíveis"
+    ],
+    "review": [
+      "Revisamos regularmente condições e limites",
+      "Revisamos alguns benefícios, sem rotina fixa",
+      "Não há revisão periódica dessas condições",
+      "Não sei quando ocorreu a última revisão"
+    ]
+  }
+};
+
 const pillars=[
  {id:'saude',label:'Saúde preventiva',short:'Saúde',icon:'♡',tip:'Conheça suas alternativas de acesso a consultas, exames e acompanhamento com profissionais — pelo SUS, serviços privados ou plano de saúde.',b2c:['Tenho uma rotina de orientação preventiva com profissionais de saúde, respeitando minhas necessidades e momento de vida.','Se precisar de consultas, exames ou atendimento, sei onde ir e como obter o cuidado de que preciso.'],b2b:['Nossa empresa estimula informação e orientação preventiva para colaboradoras, de forma acolhedora e responsável.','A equipe conhece os meios disponíveis para acessar consultas, exames e outros cuidados de saúde.']},
  {id:'bemestar',label:'Bem-estar emocional',short:'Bem-estar',icon:'✿',tip:'Equilíbrio emocional, apoio profissional e descanso também integram um cuidado consistente.',b2c:['Consigo encontrar algum espaço para descanso e equilíbrio emocional na minha rotina.','Se precisar de apoio emocional profissional, sei onde buscar atendimento ou orientação.'],b2b:['Há iniciativas para acolhimento emocional, qualidade de vida e equilíbrio na jornada das colaboradoras.','Nossa equipe conhece caminhos para acessar apoio emocional e orientações quando necessário.']},
- {id:'apoio',label:'Rede de apoio',short:'Apoio',icon:'♧',tip:'Ter uma rede de pessoas e serviços de confiança faz diferença nos desafios do cotidiano.',b2c:['Tenho pessoas de confiança com quem contar em momentos difíceis.','Se precisar de ajuda para cuidar de mim ou de alguém da família, conheço os recursos e serviços disponíveis.'],b2b:['A organização conta com canais de acolhimento para colaboradoras em situações delicadas.','Nossos benefícios, serviços de apoio e orientações são comunicados com clareza à equipe.']},
- {id:'vida',label:'Proteção da vida',short:'Vida',icon:'◇',tip:'Conversar sobre amparo financeiro e continuidade é uma forma de cuidado com o futuro de quem importa.',b2c:['Já refleti sobre quem precisaria de suporte caso eu enfrentasse um imprevisto importante.','Tenho alguma forma organizada de amparo financeiro para mim ou pessoas importantes diante de situações inesperadas.'],b2b:['A empresa considera como apoiar colaboradoras e familiares em imprevistos relevantes.','Existem medidas de amparo financeiro e continuidade que ajudam a proteger as pessoas da equipe.']},
+ {id:'apoio',label:'Rede de apoio',short:'Apoio',icon:'♧',tip:'Ter uma rede de pessoas e serviços de confiança faz diferença nos desafios do cotidiano.',b2c:['Tenho pessoas de confiança com quem contar em momentos difíceis.','Se precisar de ajuda para cuidar de mim ou de alguém da família, tenho recursos e serviços disponíveis.'],b2b:['A organização conta com canais de acolhimento para colaboradoras em situações delicadas.','Nossos benefícios, serviços de apoio e orientações são comunicados com clareza à equipe.']},
+ {id:'vida',label:'Proteção da vida',short:'Vida',icon:'◇',tip:'Conversar sobre amparo financeiro e continuidade é uma forma de cuidado com o futuro de quem importa.',b2c:['Já refleti sobre quem precisaria de suporte caso eu enfrentasse um imprevisto importante.','Tenho alguma forma organizada de amparo financeiro para mim ou pessoas importantes diante de algum imprevisto.'],b2b:['A empresa considera como apoiar colaboradoras e familiares em imprevistos relevantes.','Existem medidas de amparo financeiro e continuidade que ajudam a proteger as pessoas da equipe.']},
  {id:'financeiro',label:'Estabilidade financeira',short:'Estabilidade',icon:'△',tip:'Planejar despesas e imprevistos favorece escolhas mais tranquilas para hoje e amanhã.',b2c:['Conheço minhas principais despesas e procuro planejar meus recursos com antecedência.','Tenho alguma reserva ou estratégia para enfrentar despesas inesperadas sem comprometer toda a rotina.'],b2b:['Nossa empresa se organiza financeiramente para manter iniciativas de cuidado com as colaboradoras.','Analisamos possíveis custos de imprevistos que possam afetar pessoas, estrutura e continuidade.']},
- {id:'futuro',label:'Planejamento de futuro',short:'Futuro',icon:'❀',tip:'Revisitar escolhas sobre saúde, família, trabalho e patrimônio permite acompanhar as mudanças da vida.',b2c:['Tenho prioridades pessoais e familiares para os próximos anos.','Costumo revisar meus planos e formas de proteção quando mudam minha família, trabalho ou rotina.'],b2b:['Temos objetivos claros para fortalecer o cuidado com colaboradoras e famílias.','A empresa revê regularmente benefícios, recursos e planos de continuidade conforme seu cenário muda.']}
+ {id:'futuro',label:'Planejamento de futuro',short:'Futuro',icon:'❀',tip:'Revisitar escolhas sobre saúde, família, trabalho e patrimônio permite acompanhar as mudanças da vida.',b2c:['Tenho planejamentos pessoais e familiares para os próximos anos.','Reviso todos os meus planos e proteções quando muda algo em minha rotina, família e trabalho.'],b2b:['Temos objetivos claros para fortalecer o cuidado com colaboradoras e famílias.','A empresa revê regularmente benefícios, recursos e planos de continuidade conforme seu cenário muda.']}
 ];
 
 const contextAnswers=[
@@ -335,10 +547,10 @@ const contextQuestions={
  dental:{step:2,symbol:'✿',tag:'Cuidado complementar',b2c:'Se eu precisasse de atendimento odontológico, sei como acessar esse cuidado com tranquilidade.',b2b:'As colaboradoras conhecem como acessar cuidados odontológicos de forma previsível.',options:contextAnswers},
  property:{step:3,symbol:'⌂',tag:'Lar e estrutura',b2c:'Você tem uma residência ou bens domésticos cuja perda ou dano afetaria sua tranquilidade?',b2b:'A empresa tem local, equipamentos ou patrimônio físico importantes para manter a atividade?',options:binaryAnswers},
  propertyplan:{step:3,symbol:'❀',tag:'Cuidado com o patrimônio',b2c:'Se um imprevisto importante afetasse sua moradia, há um plano para lidar com reparos e despesas?',b2b:'Caso algo atingisse a estrutura ou equipamentos, há medidas de amparo e continuidade?',options:contextAnswers,depends:'property'},
- review:{step:4,symbol:'♡',tag:'Revisão de escolhas',b2c:'Você sabe onde consultar as condições das proteções e benefícios que já utiliza, quando precisa?',b2b:'As condições e limites dos benefícios e proteções existentes são revisados com regularidade?',options:contextAnswers}
+ review:{step:4,symbol:'♡',tag:'Revisão de escolhas',b2c:'Você sabe onde consultar todas as proteções e benefícios que já utiliza, quando precisa?',b2b:'As condições e limites dos benefícios e proteções existentes são revisados com regularidade?',options:contextAnswers}
 };
-function makeContextQuestion(key){const q=contextQuestions[key],name='ctx_'+key;
-return `<div class="question ${q.depends?'full':''}" data-context-key="${key}"><div class="question-heading"><span class="q-symbol">${q.symbol}</span><div><small>${escapeHtml(q.tag)}</small><h4>${escapeHtml(q[APP.mode])}</h4></div></div><div class="choice-row">${q.options.map(o=>`<label><input type="radio" name="${name}" value="${o.value}"><span>${escapeHtml(o.label)}</span></label>`).join('')}</div></div>`}
+function makeContextQuestion(key){const q=contextQuestions[key],name='ctx_'+key;const customized=contextAnswerLabels[APP.mode]?.[key]||[];
+return `<div class="question ${q.depends?'full':''}" data-context-key="${key}"><div class="question-heading"><span class="q-symbol">${q.symbol}</span><div><small>${escapeHtml(q.tag)}</small><h4>${escapeHtml(q[APP.mode])}</h4></div></div><div class="choice-row">${q.options.map((o,i)=>`<label><input type="radio" name="${name}" value="${o.value}"><span>${escapeHtml(customized[i]||o.label)}</span></label>`).join('')}</div></div>`}
 function refreshContextVisibility(){
  ['propertyplan'].forEach(key=>{
   const depends=contextQuestions[key].depends;
@@ -431,7 +643,7 @@ function setMode(mode){
 }
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
 document.querySelectorAll('[data-pick-mode]').forEach(b=>b.addEventListener('click',()=>{setMode(b.dataset.pickMode);$('diagnostico').scrollIntoView({behavior:'smooth',block:'start'})}));
-function makeQuestion(p,index){const qtext=p[APP.mode][index%2],name=`q_${p.id}_${index%2}`;return `<div class="question" data-question="${name}"><div class="question-heading"><span class="q-symbol">${p.icon}</span><div><small>${escapeHtml(p.label)}</small><h4>${escapeHtml(qtext)}</h4></div></div><div class="choice-row">${answers.map((a,i)=>`<label><input type="radio" name="${name}" value="${a.value}" ${APP.result?.answers?.[name]===a.value?'checked':''}><span>${escapeHtml(a.label)}</span></label>`).join('')}</div></div>`}
+function makeQuestion(p,index){const qtext=p[APP.mode][index%2],name=`q_${p.id}_${index%2}`;const customized=questionAnswerLabels[APP.mode]?.[name]||[];return `<div class="question" data-question="${name}"><div class="question-heading"><span class="q-symbol">${p.icon}</span><div><small>${escapeHtml(p.label)}</small><h4>${escapeHtml(qtext)}</h4></div></div><div class="choice-row">${answers.map((a,i)=>`<label><input type="radio" name="${name}" value="${a.value}" ${APP.result?.answers?.[name]===a.value?'checked':''}><span>${escapeHtml(customized[i]||a.label)}</span></label>`).join('')}</div></div>`}
 function renderQuestionSteps(){
  for(let step=2;step<=4;step++){
   const slice=pillars.slice((step-2)*2,(step-1)*2);
